@@ -135,6 +135,8 @@ namespace CallForATrader
         public int priorityCost = 500;
         public int cooldownTicks = 60000; // 24 hours
         public int letterTimeoutTicks = 10000; // 4 hours
+        public bool showAlertInOrbit = true;
+        public bool showTrackingLetters = true;
 
         public override void ExposeData()
         {
@@ -145,6 +147,8 @@ namespace CallForATrader
             Scribe_Values.Look(ref priorityCost, "priorityCost", 500);
             Scribe_Values.Look(ref cooldownTicks, "cooldownTicks", 60000);
             Scribe_Values.Look(ref letterTimeoutTicks, "letterTimeoutTicks", 10000);
+            Scribe_Values.Look(ref showAlertInOrbit, "showAlertInOrbit", true);
+            Scribe_Values.Look(ref showTrackingLetters, "showTrackingLetters", true);
         }
     }
 
@@ -189,6 +193,10 @@ namespace CallForATrader
             listingStandard.Label("Offer Letter Expiry: " + timeoutHours + " Hours (" + settings.letterTimeoutTicks + " Ticks)");
             float timeoutSlider = listingStandard.Slider(timeoutHours, 0f, 24f);
             settings.letterTimeoutTicks = (int)timeoutSlider * 2500;
+
+            listingStandard.Gap();
+            listingStandard.CheckboxLabeled("Show 'Orbital Trader in Orbit' alert banner", ref settings.showAlertInOrbit, "Show or hide the alert banner on the right side of the screen when an orbital trader is in orbit.");
+            listingStandard.CheckboxLabeled("Show trader tracking letters", ref settings.showTrackingLetters, "Show or hide live countdown letters for arriving and active traders.");
 
             listingStandard.End();
         }
@@ -374,6 +382,7 @@ namespace CallForATrader
 
         private void CreateTrackingLetter(PendingTraderArrival arrival)
         {
+            if (!CallForATraderMod.settings.showTrackingLetters) return;
             try
             {
                 LetterDef letterDef = DefDatabase<LetterDef>.GetNamed("Letter_TraderTracking", false);
@@ -581,13 +590,66 @@ namespace CallForATrader
             return null;
         }
 
+        private Faction FindFriendlyFactionForTrader(TraderKindDef trader)
+        {
+            if (trader == null) return FindFriendlyFaction();
+
+            // 1. Check if any friendly, non-hidden faction has this trader in its trader kind lists
+            foreach (Faction f in Find.FactionManager.AllFactions)
+            {
+                if (!f.IsPlayer && !f.defeated && !f.HostileTo(Faction.OfPlayer) && f.def != null && !f.def.hidden)
+                {
+                    if ((f.def.caravanTraderKinds != null && f.def.caravanTraderKinds.Contains(trader)) ||
+                        (f.def.visitorTraderKinds != null && f.def.visitorTraderKinds.Contains(trader)) ||
+                        (f.def.baseTraderKinds != null && f.def.baseTraderKinds.Contains(trader)))
+                    {
+                        return f;
+                    }
+                }
+            }
+
+            // 2. Check if trader is an Empire / Imperial / Royal trader
+            bool isEmpireTrader = false;
+            if (trader.defName != null && (trader.defName.IndexOf("Empire", StringComparison.OrdinalIgnoreCase) >= 0 || trader.defName.IndexOf("Imperial", StringComparison.OrdinalIgnoreCase) >= 0 || trader.defName.IndexOf("Royal", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                isEmpireTrader = true;
+            }
+            if (trader.label != null && (trader.label.IndexOf("Empire", StringComparison.OrdinalIgnoreCase) >= 0 || trader.label.IndexOf("Imperial", StringComparison.OrdinalIgnoreCase) >= 0 || trader.label.IndexOf("Royal", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                isEmpireTrader = true;
+            }
+
+            if (isEmpireTrader)
+            {
+                Faction empire = Find.FactionManager.OfEmpire;
+                if (empire != null && !empire.defeated && !empire.HostileTo(Faction.OfPlayer))
+                {
+                    return empire;
+                }
+
+                foreach (Faction f in Find.FactionManager.AllFactions)
+                {
+                    if (!f.IsPlayer && !f.defeated && !f.HostileTo(Faction.OfPlayer) && f.def != null)
+                    {
+                        if (f.def.defName == "Empire" || (f.def.defName != null && f.def.defName.IndexOf("Empire", StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            return f;
+                        }
+                    }
+                }
+            }
+
+            // 3. Fallback to default friendly faction
+            return FindFriendlyFaction();
+        }
+
         private bool SpawnCaravan(TraderKindDef trader)
         {
             IncidentDef incidentDef = DefDatabase<IncidentDef>.GetNamed("TraderCaravanArrival", false);
             if (incidentDef == null) return false;
 
             IncidentParms parms = StorytellerUtility.DefaultParmsNow(incidentDef.category, map);
-            parms.faction = FindFriendlyFaction();
+            parms.faction = FindFriendlyFactionForTrader(trader);
             parms.traderKind = trader;
 
             return incidentDef.Worker.TryExecute(parms);
@@ -811,6 +873,11 @@ namespace CallForATrader
 
         public override AlertReport GetReport()
         {
+            if (!CallForATraderMod.settings.showAlertInOrbit)
+            {
+                return AlertReport.Inactive;
+            }
+
             foreach (Map map in Find.Maps)
             {
                 if (map.passingShipManager != null && map.passingShipManager.passingShips.Count > 0)

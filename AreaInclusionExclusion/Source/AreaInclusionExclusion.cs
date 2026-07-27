@@ -12,6 +12,70 @@ using UnityEngine;
 namespace AreaInclusionExclusion
 {
     // ==========================================
+    // 0. MOD SETTINGS & UTILITY FILTER
+    // ==========================================
+    public class AreaInclusionExclusionSettings : ModSettings
+    {
+        public bool hideUtilityAreas = false;
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref hideUtilityAreas, "hideUtilityAreas", false);
+        }
+    }
+
+    public class AreaInclusionExclusionMod : Mod
+    {
+        public static AreaInclusionExclusionSettings settings;
+
+        public AreaInclusionExclusionMod(ModContentPack content) : base(content)
+        {
+            settings = GetSettings<AreaInclusionExclusionSettings>();
+        }
+
+        public override void DoSettingsWindowContents(Rect inRect)
+        {
+            Listing_Standard listingStandard = new Listing_Standard();
+            listingStandard.Begin(inRect);
+            listingStandard.CheckboxLabeled("Hide auto-generated utility zones in Schedule tab", ref settings.hideUtilityAreas, "Hides auto-generated zones like Cleaning, Snow, Water, and Vehicle areas from the area selector in the Schedule tab.");
+            listingStandard.End();
+        }
+
+        public override string SettingsCategory()
+        {
+            return "Area Inclusion Exclusion";
+        }
+    }
+
+    public static class UtilityAreaFilter
+    {
+        private static readonly string[] utilityKeywords = new string[]
+        {
+            "clean", "snow", "water", "vehicle", "dumping", "autoclean", "sweeper"
+        };
+
+        public static bool IsUtilityArea(Area area)
+        {
+            if (area == null) return false;
+            string label = area.Label != null ? area.Label.ToLower() : "";
+            for (int i = 0; i < utilityKeywords.Length; i++)
+            {
+                if (label.Contains(utilityKeywords[i]))
+                {
+                    return true;
+                }
+            }
+            string typeName = area.GetType().Name.ToLower();
+            if (typeName.Contains("clean") || typeName.Contains("snow") || typeName.Contains("water") || typeName.Contains("vehicle"))
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+
+    // ==========================================
     // 1. DATA CONTAINER FOR PERSISTENT STATE
     // ==========================================
     public class AreaInclusionExclusionData : IExposable
@@ -73,6 +137,32 @@ namespace AreaInclusionExclusion
             {
                 var harmony = new Harmony("thefarawaydev.areainclusionexclusion");
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+                // Sleek Work Schedule Tab / Sleek Schedule compatibility patches
+                var sleekTypes = new string[]
+                {
+                    "SleekWorkTab.AreaAllowedGUI_Patch",
+                    "SleekSchedule.AreaAllowedGUI_Patch",
+                    "SleekWorkTab.MainTabWindow_Work_Patch",
+                    "SleekSchedule.MainTabWindow_Schedule_Patch"
+                };
+
+                foreach (var typeName in sleekTypes)
+                {
+                    Type sleekType = AccessTools.TypeByName(typeName);
+                    if (sleekType != null)
+                    {
+                        var targetMethod = AccessTools.Method(sleekType, "DoAllowedAreaSelectors") 
+                                        ?? AccessTools.Method(sleekType, "DrawAreaSelectors");
+                        if (targetMethod != null)
+                        {
+                            var prefixMethod = AccessTools.Method(typeof(Patch_AreaAllowedGUI_DoAllowedAreaSelectors), nameof(Patch_AreaAllowedGUI_DoAllowedAreaSelectors.Prefix));
+                            harmony.Patch(targetMethod, prefix: new HarmonyMethod(prefixMethod));
+                            Log.Message("[AreaInclusionExclusion] Successfully applied compatibility patch for " + typeName);
+                        }
+                    }
+                }
+
                 Log.Message("[AreaInclusionExclusion] Initialized Harmony patches successfully.");
             }
             catch (Exception ex)
@@ -194,23 +284,58 @@ namespace AreaInclusionExclusion
     [HarmonyPatch(typeof(AreaAllowedGUI), "DoAllowedAreaSelectors")]
     public static class Patch_AreaAllowedGUI_DoAllowedAreaSelectors
     {
+        private static Vector2 scrollPosition = Vector2.zero;
+
         public static bool Prefix(Rect rect, Pawn p)
         {
             if (p == null || p.Map == null || p.playerSettings == null) return true;
 
             List<Area> allAreas = p.Map.areaManager.AllAreas;
-            int count = allAreas.Count + 1; // +1 for Unrestricted
-            float btnWidth = rect.width / (float)count;
-
-            // Draw "Unrestricted" button
-            Rect unRestRect = new Rect(rect.x, rect.y, btnWidth, rect.height).ContractedBy(1f);
-            DrawAreaButton(unRestRect, p, null);
-
-            // Draw all other areas
-            for (int i = 0; i < allAreas.Count; i++)
+            if (AreaInclusionExclusionMod.settings != null && AreaInclusionExclusionMod.settings.hideUtilityAreas)
             {
-                Rect areaRect = new Rect(rect.x + (i + 1) * btnWidth, rect.y, btnWidth, rect.height).ContractedBy(1f);
-                DrawAreaButton(areaRect, p, allAreas[i]);
+                allAreas = allAreas.Where(a => !UtilityAreaFilter.IsUtilityArea(a)).ToList();
+            }
+
+            int count = allAreas.Count + 1; // +1 for Unrestricted
+            float minBtnWidth = 50f;
+            float totalWidthNeeded = count * minBtnWidth;
+
+            if (totalWidthNeeded <= rect.width)
+            {
+                float btnWidth = rect.width / (float)count;
+
+                // Draw "Unrestricted" button
+                Rect unRestRect = new Rect(rect.x, rect.y, btnWidth, rect.height).ContractedBy(1f);
+                DrawAreaButton(unRestRect, p, null);
+
+                // Draw all other areas
+                for (int i = 0; i < allAreas.Count; i++)
+                {
+                    Rect areaRect = new Rect(rect.x + (i + 1) * btnWidth, rect.y, btnWidth, rect.height).ContractedBy(1f);
+                    DrawAreaButton(areaRect, p, allAreas[i]);
+                }
+            }
+            else
+            {
+                // Too wide for fixed column width: Use horizontal scrolling
+                float btnWidth = minBtnWidth;
+                Rect outRect = rect;
+                Rect viewRect = new Rect(0f, 0f, totalWidthNeeded, rect.height - 4f);
+
+                Widgets.BeginScrollView(outRect, ref scrollPosition, viewRect, true);
+
+                // Draw "Unrestricted" button
+                Rect unRestRect = new Rect(0f, 0f, btnWidth, viewRect.height).ContractedBy(1f);
+                DrawAreaButton(unRestRect, p, null);
+
+                // Draw all other areas
+                for (int i = 0; i < allAreas.Count; i++)
+                {
+                    Rect areaRect = new Rect((i + 1) * btnWidth, 0f, btnWidth, viewRect.height).ContractedBy(1f);
+                    DrawAreaButton(areaRect, p, allAreas[i]);
+                }
+
+                Widgets.EndScrollView();
             }
 
             return false; // Skip vanilla drawing
@@ -285,8 +410,11 @@ namespace AreaInclusionExclusion
                 Widgets.DrawHighlight(rect);
             }
 
-            // Draw text
+            // Text and Tooltip
             string labelText = (area != null) ? area.Label : "Unrestricted".Translate().ToString();
+            string statusText = isIncluded ? " (Included)" : (isExcluded ? " (Excluded)" : "");
+            TooltipHandler.TipRegion(rect, labelText + statusText + "\n\nLeft-Click: Toggle Include (Green)\nRight-Click: Toggle Exclude (Red)");
+
             Text.Anchor = TextAnchor.MiddleCenter;
             Text.Font = GameFont.Tiny;
             GUI.color = (isIncluded || isExcluded) ? Color.white : new Color(0.8f, 0.8f, 0.8f, 0.6f);

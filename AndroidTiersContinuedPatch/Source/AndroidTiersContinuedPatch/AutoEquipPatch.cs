@@ -17,8 +17,8 @@ namespace AndroidTiersContinuedPatch
             if (___pawn == null || !___pawn.Spawned || ___pawn.Dead || ___pawn.Faction != Faction.OfPlayer)
                 return;
 
-            // Only run if the toggle is enabled in settings
-            if (AndroidTiersPatchMod.settings == null || !AndroidTiersPatchMod.settings.autoEquipEnabled)
+            // Only run if at least one auto-equip setting is enabled
+            if (AndroidTiersPatchMod.settings == null || (!AndroidTiersPatchMod.settings.autoEquipWeapons && !AndroidTiersPatchMod.settings.autoEquipApparel))
                 return;
 
             // Only apply to androids
@@ -42,20 +42,26 @@ namespace AndroidTiersContinuedPatch
 
             lastScanTick[pawnId] = currentTick;
 
-            // Try to find a better weapon
-            Job equipJob = TryGetWeaponUpgradeJob(___pawn);
-            if (equipJob != null)
+            // Try to find a better weapon (if weapon auto-equip enabled)
+            if (AndroidTiersPatchMod.settings.autoEquipWeapons)
             {
-                __result = new ThinkResult(equipJob, null, null, false);
-                return;
+                Job equipJob = TryGetWeaponUpgradeJob(___pawn);
+                if (equipJob != null)
+                {
+                    __result = new ThinkResult(equipJob, null, null, false);
+                    return;
+                }
             }
 
-            // Try to find a better apparel/armor
-            Job wearJob = TryGetApparelUpgradeJob(___pawn);
-            if (wearJob != null)
+            // Try to find a better apparel/armor (if apparel auto-equip enabled)
+            if (AndroidTiersPatchMod.settings.autoEquipApparel)
             {
-                __result = new ThinkResult(wearJob, null, null, false);
-                return;
+                Job wearJob = TryGetApparelUpgradeJob(___pawn);
+                if (wearJob != null)
+                {
+                    __result = new ThinkResult(wearJob, null, null, false);
+                    return;
+                }
             }
         }
 
