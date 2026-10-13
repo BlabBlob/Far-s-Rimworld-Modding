@@ -36,5 +36,5 @@ HOW IT WORKS (please read): this is not a simple network-to-network bridge. Item
 If you do not want your disks emptied, use Pull on receiving maps and Push only on the map(s) you want to feed the ledger, or leave relays Isolated. Transfer speed and amount are limited by research (bandwidth) and the relay's power draw scales with what it moves (up to 5000 W). Only stackable items are transferred.
 
 Dev Note: This mod is an addon and a tribute to SK's original fantastic work on Matter Network. All credit for the base digitization concept, textures, and mechanics goes to SK.</description>
-  <modVersion>1.4.0</modVersion>
+  <modVersion>1.5.0</modVersion>
 </ModMetaData>
