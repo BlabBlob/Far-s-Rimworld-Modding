@@ -171,24 +171,26 @@ namespace TheFarawayDev.MatterAnywhere
             // Bottom List: Ledger Contents
             float listY = controlY + 165f;
             float listHeight = inRect.height - (listY - inRect.y);
-            Rect listRect = new Rect(inRect.x, listY, inRect.width, listHeight);
-            
-            Widgets.DrawMenuSection(listRect);
-            Rect listInner = listRect.ContractedBy(10f);
+
+            // Left Column: Ledger Contents
+            float leftColWidth = 470f;
+            Rect ledgerRect = new Rect(inRect.x, listY, leftColWidth, listHeight);
+            Widgets.DrawMenuSection(ledgerRect);
+            Rect ledgerInner = ledgerRect.ContractedBy(10f);
 
             Text.Font = GameFont.Tiny;
             GUI.color = Color.gray;
-            Widgets.Label(new Rect(listInner.x, listInner.y, 150f, 20f), "PLANETARY LEDGER CONTENTS");
+            Widgets.Label(new Rect(ledgerInner.x, ledgerInner.y, 150f, 20f), "PLANETARY LEDGER CONTENTS");
 
             // Search Input Field
-            Rect searchRect = new Rect(listInner.x + 160f, listInner.y - 2f, 150f, 18f);
+            Rect searchRect = new Rect(ledgerInner.x + 160f, ledgerInner.y - 2f, 150f, 18f);
             filterText = Widgets.TextField(searchRect, filterText);
 
-            Widgets.Label(new Rect(listInner.x + listInner.width - 150f, listInner.y, 150f, 20f), "Total Stored");
+            Widgets.Label(new Rect(ledgerInner.x + ledgerInner.width - 90f, ledgerInner.y, 90f, 20f), "Total Stored");
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
 
-            float itemStartY = listInner.y + 20f;
+            float itemStartY = ledgerInner.y + 20f;
             float itemHeight = 35f;
 
             // Calculate filtered list
@@ -205,15 +207,15 @@ namespace TheFarawayDev.MatterAnywhere
                 }
             }
 
-            Rect viewRect = new Rect(0f, 0f, listInner.width - 16f, Math.Max(filteredItems.Count * itemHeight, listInner.height - 30f));
-            Rect outRect = new Rect(listInner.x, itemStartY, listInner.width, listInner.height - 25f);
+            Rect viewRect = new Rect(0f, 0f, ledgerInner.width - 16f, Math.Max(filteredItems.Count * itemHeight, ledgerInner.height - 30f));
+            Rect outRect = new Rect(ledgerInner.x, itemStartY, ledgerInner.width, ledgerInner.height - 25f);
 
             Widgets.BeginScrollView(outRect, ref scrollPosition, viewRect, true);
 
             if (filteredItems.Count == 0)
             {
                 GUI.color = Color.gray;
-                Widgets.Label(new Rect(10f, 10f, viewRect.width - 20f, 30f), "No matching resources stored in the planetary ledger.");
+                Widgets.Label(new Rect(10f, 10f, viewRect.width - 20f, 30f), "No resources in planetary ledger.");
                 GUI.color = Color.white;
             }
             else
@@ -236,11 +238,11 @@ namespace TheFarawayDev.MatterAnywhere
                     Widgets.ThingIcon(iconRect, def);
 
                     // Name
-                    Rect labelRect = new Rect(45f, currentItemY + 5f, 250f, 25f);
+                    Rect labelRect = new Rect(45f, currentItemY + 5f, 170f, 25f);
                     Widgets.Label(labelRect, def.LabelCap);
 
                     // Count
-                    Rect countRect = new Rect(viewRect.width - 250f, currentItemY + 5f, 90f, 25f);
+                    Rect countRect = new Rect(viewRect.width - 240f, currentItemY + 5f, 90f, 25f);
                     Text.Anchor = TextAnchor.MiddleRight;
                     GUI.color = new Color(0.9f, 0.75f, 0.2f);
                     Widgets.Label(countRect, kvp.Value.ToString("N0"));
@@ -251,7 +253,7 @@ namespace TheFarawayDev.MatterAnywhere
                     Rect drop1Rect = new Rect(viewRect.width - 145f, currentItemY + 5f, 65f, 24f);
                     if (Widgets.ButtonText(drop1Rect, "Drop 1", true, true, true))
                     {
-                        DropItem(def, 1, comp.parent);
+                        DropItem(def, 1, comp.parent, comp);
                     }
 
                     // Drop Stack Button
@@ -259,7 +261,7 @@ namespace TheFarawayDev.MatterAnywhere
                     if (Widgets.ButtonText(dropStackRect, "Drop Stack", true, true, true))
                     {
                         int amount = Math.Min(kvp.Value, def.stackLimit);
-                        DropItem(def, amount, comp.parent);
+                        DropItem(def, amount, comp.parent, comp);
                     }
 
                     currentItemY += itemHeight;
@@ -267,6 +269,39 @@ namespace TheFarawayDev.MatterAnywhere
             }
             
             Widgets.EndScrollView();
+
+            // Right Column: Recent Transfers Log
+            float rightColWidth = inRect.width - leftColWidth - 15f;
+            float rightColX = inRect.x + leftColWidth + 15f;
+            Rect logRect = new Rect(rightColX, listY, rightColWidth, listHeight);
+            Widgets.DrawMenuSection(logRect);
+            Rect logInner = logRect.ContractedBy(10f);
+
+            Text.Font = GameFont.Tiny;
+            GUI.color = Color.gray;
+            Widgets.Label(new Rect(logInner.x, logInner.y, 200f, 20f), "RECENT TRANSFERS LOG");
+            GUI.color = Color.white;
+            Text.Font = GameFont.Small;
+
+            float logStartY = logInner.y + 20f;
+            float logLineHeight = 22f;
+
+            float currentLogY = logStartY;
+            if (comp.transferLogs.Count == 0)
+            {
+                GUI.color = Color.gray;
+                Widgets.Label(new Rect(logInner.x, currentLogY, logInner.width, 30f), "No recent transfers recorded.");
+                GUI.color = Color.white;
+            }
+            else
+            {
+                foreach (var logLine in comp.transferLogs)
+                {
+                    if (currentLogY + logLineHeight > logRect.yMax - 15f) break;
+                    Widgets.Label(new Rect(logInner.x, currentLogY, logInner.width, logLineHeight), logLine);
+                    currentLogY += logLineHeight;
+                }
+            }
         }
 
         private void DrawStatBox(Rect rect, string label, string value)
@@ -301,7 +336,7 @@ namespace TheFarawayDev.MatterAnywhere
             y += 24f;
         }
 
-        private void DropItem(ThingDef def, int count, Thing parent)
+        private void DropItem(ThingDef def, int count, Thing parent, CompNetworkRelay relay)
         {
             var tracker = MatterNetworkWorldTracker.Instance;
             if (tracker == null || parent == null || !parent.Spawned) return;
@@ -318,6 +353,12 @@ namespace TheFarawayDev.MatterAnywhere
                     tracker.globalResourceLedger.Remove(key);
                 }
                 HarmonyPatches.globalLedgerDirty = true;
+
+                // Record manual drop in logs
+                if (relay != null)
+                {
+                    relay.RecordTransfer($"Dropped {toSpawn}x {def.LabelCap}");
+                }
 
                 Thing spawned = ThingMaker.MakeThing(def);
                 spawned.stackCount = toSpawn;

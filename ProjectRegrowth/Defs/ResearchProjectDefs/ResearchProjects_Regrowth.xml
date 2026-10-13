@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ResearchProjectDef>
+    <defName>LimbRegrowth</defName>
+    <label>Advanced Bioregeneration</label>
+    <description>Unlock the biosculpter pod's advanced limb regrowth cycle. This cycle allows the regeneration of entire lost limbs and internal organs for biological pawns, and cures severe age-related ailments.</description>
+    <baseCost>5000</baseCost>
+    <techLevel>Ultra</techLevel>
+    <requiredResearchBuilding>HiTechResearchBench</requiredResearchBuilding>
+    <requiredResearchFacilities>
+      <li>MultiAnalyzer</li>
+    </requiredResearchFacilities>
+    <prerequisites>
+      <li>Bioregeneration</li>
+    </prerequisites>
+    <researchViewX>16.00</researchViewX>
+    <researchViewY>0.60</researchViewY>
+  </ResearchProjectDef>
+</Defs>

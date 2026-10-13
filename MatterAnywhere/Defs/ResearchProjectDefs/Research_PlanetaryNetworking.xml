@@ -53,4 +53,40 @@
     <researchViewX>4.00</researchViewX>
     <researchViewY>0.50</researchViewY>
   </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>QuantumBandwidth_III</defName>
+    <label>quantum bandwidth III</label>
+    <description>Introduces a sub-atomic compression algorithm, increasing the Quantum Relay bandwidth limit to 10,000 items and reducing transaction interval to 60 ticks (1 second).</description>
+    <tab>MN_MatterNetworkTab</tab>
+    <baseCost>6000</baseCost>
+    <techLevel>Spacer</techLevel>
+    <prerequisites>
+      <li>QuantumBandwidth_II</li>
+    </prerequisites>
+    <requiredResearchBuilding>HiTechResearchBench</requiredResearchBuilding>
+    <requiredResearchFacilities>
+      <li>MultiAnalyzer</li>
+    </requiredResearchFacilities>
+    <researchViewX>5.00</researchViewX>
+    <researchViewY>0.50</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>QuantumBandwidth_Instant</defName>
+    <label>quantum instantaneous sync</label>
+    <description>Achieves hyper-entanglement, allowing the relay to synchronize materials almost instantaneously (every 10 ticks) with unlimited bandwidth capacity.</description>
+    <tab>MN_MatterNetworkTab</tab>
+    <baseCost>8000</baseCost>
+    <techLevel>Ultra</techLevel>
+    <prerequisites>
+      <li>QuantumBandwidth_III</li>
+    </prerequisites>
+    <requiredResearchBuilding>HiTechResearchBench</requiredResearchBuilding>
+    <requiredResearchFacilities>
+      <li>MultiAnalyzer</li>
+    </requiredResearchFacilities>
+    <researchViewX>6.00</researchViewX>
+    <researchViewY>0.50</researchViewY>
+  </ResearchProjectDef>
 </Defs>

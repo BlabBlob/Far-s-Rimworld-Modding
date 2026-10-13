@@ -13,6 +13,7 @@ namespace TheFarawayDev.MatterAnywhere
         public static HashSet<Thing> virtualPlanetaryThings = new HashSet<Thing>();
         public static Dictionary<SK_Matter_Network.DataNetwork, int> lastSyncTicks = new Dictionary<SK_Matter_Network.DataNetwork, int>();
         public static bool globalLedgerDirty = true;
+        public static bool suppressLedgerDeduction = false;
 
         static HarmonyPatches()
         {
@@ -84,74 +85,91 @@ namespace TheFarawayDev.MatterAnywhere
                 Log.Message($"[MatterAnywhere] SyncVirtualThings: Network={network.NetworkId}, isPullActive={isPullActive}, Tracker={(tracker != null ? "not null" : "null")}, LedgerCount={(tracker != null ? tracker.globalResourceLedger.Count.ToString() : "0")}");
             }
 
-            if (!isPullActive || tracker == null || tracker.globalResourceLedger.Count == 0)
+            try
             {
-                RemoveAllVirtualThings(controller);
-                return;
-            }
+                suppressLedgerDeduction = true;
 
-            // Sync virtual things
-            foreach (var kvp in tracker.globalResourceLedger)
-            {
-                ThingDef def = DefDatabase<ThingDef>.GetNamed(kvp.Key, false);
-                if (def == null) continue;
-
-                int ledgerCount = kvp.Value;
-                Thing virtualThing = GetVirtualThing(controller, def);
-
-                if (ledgerCount <= 0)
+                if (!isPullActive || tracker == null || tracker.globalResourceLedger.Count == 0)
                 {
-                    if (virtualThing != null)
+                    RemoveAllVirtualThings(controller);
+                    return;
+                }
+
+                // Sync virtual things
+                foreach (var kvp in tracker.globalResourceLedger)
+                {
+                    ThingDef def = DefDatabase<ThingDef>.GetNamed(kvp.Key, false);
+                    if (def == null) continue;
+
+                    int ledgerCount = kvp.Value;
+                    Thing virtualThing = GetVirtualThing(controller, def);
+
+                    if (ledgerCount <= 0)
                     {
-                        controller.innerContainer.Remove(virtualThing);
-                        virtualPlanetaryThings.Remove(virtualThing);
+                        if (virtualThing != null)
+                        {
+                            controller.innerContainer.Remove(virtualThing);
+                            virtualPlanetaryThings.Remove(virtualThing);
+                        }
+                        continue;
                     }
-                    continue;
+
+                    if (virtualThing == null)
+                    {
+                        virtualThing = ThingMaker.MakeThing(def);
+                        virtualThing.stackCount = ledgerCount;
+                        controller.innerContainer.TryAdd(virtualThing, false);
+                        virtualPlanetaryThings.Add(virtualThing);
+                    }
+                    else
+                    {
+                        virtualThing.stackCount = ledgerCount;
+                    }
                 }
 
-                if (virtualThing == null)
+                // Remove any virtual things that are no longer in the ledger
+                var toRemove = new List<Thing>();
+                foreach (var vt in virtualPlanetaryThings)
                 {
-                    virtualThing = ThingMaker.MakeThing(def);
-                    virtualThing.stackCount = ledgerCount;
-                    controller.innerContainer.TryAdd(virtualThing, false);
-                    virtualPlanetaryThings.Add(virtualThing);
+                    if (vt.holdingOwner == controller.innerContainer && !tracker.globalResourceLedger.ContainsKey(vt.def.defName))
+                    {
+                        toRemove.Add(vt);
+                    }
                 }
-                else
+                foreach (var vt in toRemove)
                 {
-                    virtualThing.stackCount = ledgerCount;
-                }
-            }
-
-            // Remove any virtual things that are no longer in the ledger
-            var toRemove = new List<Thing>();
-            foreach (var vt in virtualPlanetaryThings)
-            {
-                if (vt.holdingOwner == controller.innerContainer && !tracker.globalResourceLedger.ContainsKey(vt.def.defName))
-                {
-                    toRemove.Add(vt);
+                    controller.innerContainer.Remove(vt);
+                    virtualPlanetaryThings.Remove(vt);
                 }
             }
-            foreach (var vt in toRemove)
+            finally
             {
-                controller.innerContainer.Remove(vt);
-                virtualPlanetaryThings.Remove(vt);
+                suppressLedgerDeduction = false;
             }
         }
 
         private static void RemoveAllVirtualThings(SK_Matter_Network.NetworkBuildingController controller)
         {
-            var toRemove = new List<Thing>();
-            foreach (var vt in virtualPlanetaryThings)
+            try
             {
-                if (vt.holdingOwner == controller.innerContainer)
+                suppressLedgerDeduction = true;
+                var toRemove = new List<Thing>();
+                foreach (var vt in virtualPlanetaryThings)
                 {
-                    toRemove.Add(vt);
+                    if (vt.holdingOwner == controller.innerContainer)
+                    {
+                        toRemove.Add(vt);
+                    }
+                }
+                foreach (var vt in toRemove)
+                {
+                    controller.innerContainer.Remove(vt);
+                    virtualPlanetaryThings.Remove(vt);
                 }
             }
-            foreach (var vt in toRemove)
+            finally
             {
-                controller.innerContainer.Remove(vt);
-                virtualPlanetaryThings.Remove(vt);
+                suppressLedgerDeduction = false;
             }
         }
 
@@ -165,6 +183,50 @@ namespace TheFarawayDev.MatterAnywhere
                 }
             }
             return null;
+        }
+
+        public static void RecordPullInRelays(Map map, int count, ThingDef def)
+        {
+            if (map == null) return;
+            var networkComponent = map.GetComponent<SK_Matter_Network.NetworksMapComponent>();
+            if (networkComponent?.Networks == null) return;
+            foreach (var network in networkComponent.Networks)
+            {
+                if (network.Buildings == null) continue;
+                foreach (var b in network.Buildings)
+                {
+                    if (b.def.defName == "Building_QuantumNetworkRelay" && b is Building_QuantumNetworkRelay relay)
+                    {
+                        var comp = relay.GetComp<CompNetworkRelay>();
+                        if (comp != null && comp.PowerOn && (comp.currentMode == NetworkMode.PullOnly || comp.currentMode == NetworkMode.BiDirectional))
+                        {
+                            comp.RecordTransfer($"Pulled {count}x {def.LabelCap}");
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void RecordPushInRelays(Map map, int count, ThingDef def)
+        {
+            if (map == null) return;
+            var networkComponent = map.GetComponent<SK_Matter_Network.NetworksMapComponent>();
+            if (networkComponent?.Networks == null) return;
+            foreach (var network in networkComponent.Networks)
+            {
+                if (network.Buildings == null) continue;
+                foreach (var b in network.Buildings)
+                {
+                    if (b.def.defName == "Building_QuantumNetworkRelay" && b is Building_QuantumNetworkRelay relay)
+                    {
+                        var comp = relay.GetComp<CompNetworkRelay>();
+                        if (comp != null && comp.PowerOn && (comp.currentMode == NetworkMode.PushOnly || comp.currentMode == NetworkMode.BiDirectional))
+                        {
+                            comp.RecordTransfer($"Pushed {count}x {def.LabelCap}");
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -182,14 +244,80 @@ namespace TheFarawayDev.MatterAnywhere
         }
     }
 
-    [HarmonyPatch(typeof(SK_Matter_Network.DataNetwork), "DropActiveItem")]
-    public static class Patch_DropActiveItem
+    [HarmonyPatch(typeof(Verse.ThingOwner), "NotifyAddedAndMergedWith")]
+    public static class Patch_ThingOwner_NotifyAddedAndMergedWith
     {
-        public static void Prefix(SK_Matter_Network.DataNetwork __instance, Thing item, ref int count)
+        public static void Postfix(Verse.ThingOwner __instance, Thing item, int mergedCount)
         {
-            if (item != null && HarmonyPatches.virtualPlanetaryThings.Contains(item))
+            if (HarmonyPatches.suppressLedgerDeduction) return;
+
+            if (__instance is SK_Matter_Network.ControllerItemOwner && item != null && HarmonyPatches.virtualPlanetaryThings.Contains(item))
             {
                 string defName = item.def.defName;
+                var tracker = MatterNetworkWorldTracker.Instance;
+                if (tracker != null)
+                {
+                    if (tracker.globalResourceLedger.ContainsKey(defName))
+                        tracker.globalResourceLedger[defName] += mergedCount;
+                    else
+                        tracker.globalResourceLedger[defName] = mergedCount;
+                    HarmonyPatches.globalLedgerDirty = true;
+                    
+                    item.stackCount = tracker.globalResourceLedger[defName];
+
+                    var ownerThing = __instance.Owner as Thing;
+                    var map = item.Map ?? ownerThing?.Map;
+                    if (map != null)
+                    {
+                        HarmonyPatches.RecordPushInRelays(map, mergedCount, item.def);
+                    }
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Verse.ThingOwner), "NotifyRemoved")]
+    public static class Patch_ThingOwner_NotifyRemoved
+    {
+        public static void Prefix(Verse.ThingOwner __instance, Thing item)
+        {
+            if (HarmonyPatches.suppressLedgerDeduction) return;
+
+            if (__instance is SK_Matter_Network.ControllerItemOwner && item != null && HarmonyPatches.virtualPlanetaryThings.Contains(item))
+            {
+                string defName = item.def.defName;
+                var tracker = MatterNetworkWorldTracker.Instance;
+                if (tracker != null && tracker.globalResourceLedger.TryGetValue(defName, out int ledgerCount))
+                {
+                    int toDeduct = Math.Min(item.stackCount, ledgerCount);
+                    tracker.globalResourceLedger[defName] -= toDeduct;
+                    if (tracker.globalResourceLedger[defName] <= 0)
+                    {
+                        tracker.globalResourceLedger.Remove(defName);
+                    }
+                    HarmonyPatches.globalLedgerDirty = true;
+
+                    var ownerThing = __instance.Owner as Thing;
+                    var map = item.Map ?? ownerThing?.Map;
+                    if (map != null)
+                    {
+                        HarmonyPatches.RecordPullInRelays(map, toDeduct, item.def);
+                    }
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Verse.Thing), "SplitOff")]
+    public static class Patch_Thing_SplitOff
+    {
+        public static void Prefix(Verse.Thing __instance, int count)
+        {
+            if (HarmonyPatches.suppressLedgerDeduction) return;
+
+            if (__instance.holdingOwner is SK_Matter_Network.ControllerItemOwner && HarmonyPatches.virtualPlanetaryThings.Contains(__instance))
+            {
+                string defName = __instance.def.defName;
                 var tracker = MatterNetworkWorldTracker.Instance;
                 if (tracker != null && tracker.globalResourceLedger.TryGetValue(defName, out int ledgerCount))
                 {
@@ -200,6 +328,13 @@ namespace TheFarawayDev.MatterAnywhere
                         tracker.globalResourceLedger.Remove(defName);
                     }
                     HarmonyPatches.globalLedgerDirty = true;
+
+                    var ownerThing = __instance.holdingOwner.Owner as Thing;
+                    var map = __instance.Map ?? ownerThing?.Map;
+                    if (map != null)
+                    {
+                        HarmonyPatches.RecordPullInRelays(map, toDeduct, __instance.def);
+                    }
                 }
             }
         }
@@ -210,6 +345,7 @@ namespace TheFarawayDev.MatterAnywhere
     {
         public static void Prefix(SK_Matter_Network.NetworkBuildingController __instance, out List<Thing> __state)
         {
+            HarmonyPatches.suppressLedgerDeduction = true;
             __state = new List<Thing>();
             if (__instance.innerContainer == null) return;
 
@@ -230,11 +366,18 @@ namespace TheFarawayDev.MatterAnywhere
 
         public static void Postfix(SK_Matter_Network.NetworkBuildingController __instance, List<Thing> __state)
         {
-            if (__instance.innerContainer == null || __state == null) return;
-
-            foreach (var t in __state)
+            try
             {
-                __instance.innerContainer.TryAdd(t, false);
+                if (__instance.innerContainer == null || __state == null) return;
+
+                foreach (var t in __state)
+                {
+                    __instance.innerContainer.TryAdd(t, false);
+                }
+            }
+            finally
+            {
+                HarmonyPatches.suppressLedgerDeduction = false;
             }
         }
     }

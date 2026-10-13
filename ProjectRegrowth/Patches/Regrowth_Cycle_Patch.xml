@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+  <Operation Class="PatchOperationAdd">
+    <xpath>/Defs/ThingDef[defName="BiosculpterPod"]/comps</xpath>
+    <value>
+      <li Class="CompProperties_BiosculpterPod_HealingCycle">
+        <compClass>CompBiosculpterPod_RegenerationCycle</compClass>
+        <key>limbRegrowth</key>
+        <label>limb regrowth</label>
+        <description>Regrow lost limbs, restore internal organs, and cure age-related illnesses at a very high power and ingredient cost.</description>
+        <iconPath>UI/Gizmos/BiosculpterCycleBioregeneration</iconPath>
+        <durationDays>35</durationDays>
+        <operatingColor>(0.554,0.887,1.000)</operatingColor>
+        <extraRequiredIngredients>
+          <MedicineUltratech>5</MedicineUltratech>
+          <Neutroamine>15</Neutroamine>
+          <Plasteel>10</Plasteel>
+        </extraRequiredIngredients>
+        <requiredResearch>
+          <li>LimbRegrowth</li>
+        </requiredResearch>
+        <bodyPartsToRestore>
+          <li>Arm</li>
+          <li>Leg</li>
+          <li>Hand</li>
+          <li>Foot</li>
+          <li>Shoulder</li>
+          <li>Clavicle</li>
+          <li>Spine</li>
+          <li>Jaw</li>
+          <li>Pelvis</li>
+          <li>Rib</li>
+          <li>Kidney</li>
+          <li>Lung</li>
+          <li>Heart</li>
+          <li>Liver</li>
+          <li>Stomach</li>
+          <li>Eye</li>
+          <li>Ear</li>
+          <li>Nose</li>
+          <li>Finger</li>
+          <li>Toe</li>
+          <li>Tongue</li>
+        </bodyPartsToRestore>
+        <conditionsToPossiblyCure>
+          <li>Asthma</li>
+          <li>BadBack</li>
+          <li>Cataract</li>
+          <li>Blindness</li>
+          <li>Frail</li>
+          <li>HearingLoss</li>
+          <li>HeartArteryBlockage</li>
+        </conditionsToPossiblyCure>
+      </li>
+    </value>
+  </Operation>
+</Patch>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Project Regrowth</name>
+  <author>TheFarawayDev</author>
+  <packageId>thefarawaydev.projectregrowth</packageId>
+  <supportedVersions>
+    <li>1.5</li>
+    <li>1.6</li>
+  </supportedVersions>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009130273</steamWorkshopUrl>
+    </li>
+  </modDependencies>
+  <description>Project Regrowth introduces advanced Ultratech biosculpter cycles. Allows the complete regrowth of lost limbs, organs, and curing of severe ailments for both biological pawns and androids (when Android Tiers is present) at high resource and energy costs.</description>
+  <modVersion>1.0.0</modVersion>
+</ModMetaData>

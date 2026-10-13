@@ -35,6 +35,11 @@ namespace TheFarawayDev.MatterAnywhere
             base.PostExposeData();
             Scribe_Values.Look(ref currentMode, "currentMode", NetworkMode.BiDirectional);
             Scribe_Values.Look(ref bandwidthLimit, "bandwidthLimit", int.MaxValue);
+            Scribe_Collections.Look(ref transferLogs, "transferLogs", LookMode.Value);
+            if (transferLogs == null)
+            {
+                transferLogs = new List<string>();
+            }
         }
 
         public override string CompInspectStringExtra()
@@ -47,19 +52,48 @@ namespace TheFarawayDev.MatterAnywhere
             return modeStr + "\n" + limitStr + "\n" + powerStr;
         }
 
-
-
         public int GetMaxBandwidthLimit()
         {
+            var projInstant = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_Instant", false);
+            var projBandwidth3 = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_III", false);
             var projBandwidth2 = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_II", false);
             var projBandwidth1 = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_I", false);
             var projPlanetary = DefDatabase<ResearchProjectDef>.GetNamed("PlanetaryNetworking", false);
 
             if (DebugSettings.godMode) return 99999;
-            if (projBandwidth2?.IsFinished ?? false) return 99999;
+            if (projInstant?.IsFinished ?? false) return 99999;
+            if (projBandwidth3?.IsFinished ?? false) return 10000;
+            if (projBandwidth2?.IsFinished ?? false) return 2500;
             if (projBandwidth1?.IsFinished ?? false) return 500;
             if (projPlanetary?.IsFinished ?? false) return 100;
             return 0;
+        }
+
+        public int GetTickInterval()
+        {
+            var projInstant = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_Instant", false);
+            var projBandwidth3 = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_III", false);
+            var projBandwidth2 = DefDatabase<ResearchProjectDef>.GetNamed("QuantumBandwidth_II", false);
+
+            if (DebugSettings.godMode) return 10;
+            if (projInstant?.IsFinished ?? false) return 10;
+            if (projBandwidth3?.IsFinished ?? false) return 60;
+            if (projBandwidth2?.IsFinished ?? false) return 150;
+            return 250;
+        }
+
+        public List<string> transferLogs = new List<string>();
+
+        public void RecordTransfer(string message)
+        {
+            if (Find.TickManager == null) return;
+            int ticks = Find.TickManager.TicksGame;
+            string timeStr = ((ticks / 2500) % 24).ToString("D2") + ":" + ((ticks % 2500) / 41).ToString("D2");
+            transferLogs.Insert(0, $"[{timeStr}] {message}");
+            if (transferLogs.Count > 15)
+            {
+                transferLogs.RemoveAt(transferLogs.Count - 1);
+            }
         }
 
         public float GetPredictedPowerDraw()
@@ -74,9 +108,17 @@ namespace TheFarawayDev.MatterAnywhere
             return Mathf.Min(power, 5000f);
         }
 
-        public override void CompTickRare()
+        public override void CompTick()
         {
-            base.CompTickRare();
+            base.CompTick();
+            if (parent.IsHashIntervalTick(GetTickInterval()))
+            {
+                ProcessTransfers();
+            }
+        }
+
+        public void ProcessTransfers()
+        {
             if (!PowerOn)
             {
                 if (powerComp != null) powerComp.PowerOutput = -500f;
@@ -92,7 +134,7 @@ namespace TheFarawayDev.MatterAnywhere
 
                 if (Prefs.DevMode)
                 {
-                    Log.Message($"[MatterAnywhere] Relay CompTickRare on map {parent.Map?.uniqueID ?? -1}: Mode={currentMode}, Controller={(controller != null ? controller.ThingID : "null")}, ContainerCount={(container != null ? container.Count.ToString() : "null")}");
+                    Log.Message($"[MatterAnywhere] Relay ProcessTransfers on map {parent.Map?.uniqueID ?? -1}: Mode={currentMode}, Controller={(controller != null ? controller.ThingID : "null")}, ContainerCount={(container != null ? container.Count.ToString() : "null")}");
                 }
 
                 if (container != null && container.Count > 0)
@@ -135,6 +177,8 @@ namespace TheFarawayDev.MatterAnywhere
                             if (mass <= 0f) mass = 0.1f;
                             totalMass += mass * toTransfer;
                             itemsTransferred += toTransfer;
+
+                            RecordTransfer($"Pushed {toTransfer}x {thing.LabelNoCount}");
 
                             if (toTransfer == thing.stackCount)
                             {

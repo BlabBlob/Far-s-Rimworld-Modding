@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>The Cooler</name>
+  <author>TheFarawayDev</author>
+  <packageId>thefarawaydev.thecooler</packageId>
+  <supportedVersions>
+    <li>1.4</li>
+    <li>1.5</li>
+    <li>1.6</li>
+  </supportedVersions>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009130273</steamWorkshopUrl>
+    </li>
+  </modDependencies>
+  <description>The Cooler is a freestanding, high-efficiency space cooling device designed by TheFarawayDev. It functions as an inverted space heater, cooling rooms directly to a target temperature without requiring exhaust vents or wall-mounting, and features a cold-blue glow and room boundary overlay.</description>
+  <modVersion>1.0.0</modVersion>
+</ModMetaData>

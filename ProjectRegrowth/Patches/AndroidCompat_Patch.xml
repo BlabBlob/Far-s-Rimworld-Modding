@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+  <Operation Class="PatchOperationFindMod">
+    <mods>
+      <li>Android Tiers Continued</li>
+      <li>MaiconNeri.AndroidTiersContinued</li>
+    </mods>
+    <match Class="PatchOperationSequence">
+      <operations>
+        <!-- Add AndroidRegrowth research project -->
+        <li Class="PatchOperationAdd">
+          <xpath>/Defs</xpath>
+          <value>
+            <ResearchProjectDef>
+              <defName>AndroidRegrowth</defName>
+              <label>Mechanical Bioregeneration</label>
+              <description>Unlock the biosculpter pod's advanced android regrowth cycle. Allows the complete reconstruction of missing mechanical limbs, sensors, and structural framework, and heals advanced AI memory/mainframe corruption.</description>
+              <baseCost>6000</baseCost>
+              <techLevel>Ultra</techLevel>
+              <requiredResearchBuilding>HiTechResearchBench</requiredResearchBuilding>
+              <requiredResearchFacilities>
+                <li>MultiAnalyzer</li>
+              </requiredResearchFacilities>
+              <prerequisites>
+                <li>LimbRegrowth</li>
+                <li>ATPP_ResearchCraftAdvancedNanoKit</li>
+              </prerequisites>
+              <researchViewX>17.00</researchViewX>
+              <researchViewY>0.60</researchViewY>
+            </ResearchProjectDef>
+          </value>
+        </li>
+        <!-- Add androidRegrowth cycle to BiosculpterPod -->
+        <li Class="PatchOperationAdd">
+          <xpath>/Defs/ThingDef[defName="BiosculpterPod"]/comps</xpath>
+          <value>
+            <li Class="CompProperties_BiosculpterPod_HealingCycle">
+              <compClass>CompBiosculpterPod_RegenerationCycle</compClass>
+              <key>androidRegrowth</key>
+              <label>android regrowth</label>
+              <description>Regrow lost mechanical parts, restore coolant pumps/batteries, and repair AI core memory corruption/decayed frames at high power and kit cost.</description>
+              <iconPath>UI/Gizmos/BiosculpterCycleBioregeneration</iconPath>
+              <durationDays>35</durationDays>
+              <operatingColor>(0.600,0.600,0.900)</operatingColor>
+              <extraRequiredIngredients>
+                <ATPP_AndroidNanokitAdvanced>5</ATPP_AndroidNanokitAdvanced>
+                <ComponentSpacer>5</ComponentSpacer>
+                <Plasteel>25</Plasteel>
+              </extraRequiredIngredients>
+              <requiredResearch>
+                <li>AndroidRegrowth</li>
+              </requiredResearch>
+              <bodyPartsToRestore>
+                <li>MHeart</li>
+                <li>MLeftLung</li>
+                <li>MRightLung</li>
+                <li>MLeftKidney</li>
+                <li>MRightKidney</li>
+                <li>MLiver</li>
+                <li>MStomach</li>
+                <li>MRightServo</li>
+                <li>MGenerator</li>
+                <li>Framework</li>
+                <li>MechanicalThorax</li>
+                <li>LeftHand</li>
+                <li>RightHand</li>
+                <li>MechanicalNeck</li>
+                <li>MechanicalHead</li>
+                <li>VoiceSynthesizer</li>
+                <li>LeftSightSensor</li>
+                <li>RightSightSensor</li>
+                <li>LeftHearingSensor</li>
+                <li>RightHearingSensor</li>
+                <li>SmellSensor</li>
+                <li>LeftMechanicalShoulder</li>
+                <li>LeftMechanicalArm</li>
+                <li>LeftMechanicalHand</li>
+                <li>LeftHandMechanicalPinky</li>
+                <li>LeftHandMechanicalMiddleFinger</li>
+                <li>LeftHandMechanicalIndexFinger</li>
+                <li>LeftHandMechanicalThumb</li>
+                <li>RightMechanicalShoulder</li>
+                <li>RightMechanicalArm</li>
+                <li>RightMechanicalHand</li>
+                <li>RightHandMechanicalPinky</li>
+                <li>RightHandMechanicalMiddleFinger</li>
+                <li>RightHandMechanicalIndexFinger</li>
+                <li>RightHandMechanicalThumb</li>
+                <li>LeftMechanicalLeg</li>
+                <li>LeftMechanicalFoot</li>
+                <li>RightMechanicalLeg</li>
+                <li>RightMechanicalFoot</li>
+                <li>ArtificialBrain</li>
+                <li>MechanicalChassis</li>
+              </bodyPartsToRestore>
+              <conditionsToPossiblyCure>
+                <li>DecayedFrame</li>
+                <li>CorruptMemory</li>
+                <li>WeakValves</li>
+                <li>FaultyPump</li>
+              </conditionsToPossiblyCure>
+            </li>
+          </value>
+        </li>
+      </operations>
+    </match>
+  </Operation>
+</Patch>

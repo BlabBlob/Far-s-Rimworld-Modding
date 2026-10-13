@@ -910,13 +910,30 @@ namespace CallForATrader
         }
     }
 
-    public class OrbitalTradersHub : ICommunicable
+    public class OrbitalTradersHub : ICommunicable, ILoadReferenceable
     {
         private Building_CommsConsole console;
+        private static readonly Dictionary<Building_CommsConsole, OrbitalTradersHub> cachedHubs = new Dictionary<Building_CommsConsole, OrbitalTradersHub>();
+
+        public static OrbitalTradersHub GetFor(Building_CommsConsole console)
+        {
+            if (console == null) return null;
+            if (!cachedHubs.TryGetValue(console, out var hub) || hub == null)
+            {
+                hub = new OrbitalTradersHub(console);
+                cachedHubs[console] = hub;
+            }
+            return hub;
+        }
 
         public OrbitalTradersHub(Building_CommsConsole console)
         {
             this.console = console;
+        }
+
+        public string GetUniqueLoadID()
+        {
+            return "OrbitalTradersHub_" + (console != null ? console.GetUniqueLoadID() : "Global");
         }
 
         public string GetCallLabel()
@@ -956,8 +973,24 @@ namespace CallForATrader
         public static IEnumerable<ICommunicable> Postfix(IEnumerable<ICommunicable> __result, Building_CommsConsole __instance, Pawn myPawn)
         {
             List<ICommunicable> list = new List<ICommunicable>(__result);
-            list.Add(new OrbitalTradersHub(__instance));
+            list.Add(OrbitalTradersHub.GetFor(__instance));
             return list;
+        }
+    }
+
+    [HarmonyPatch(typeof(Building), "ExposeData")]
+    public static class Patch_Building_ExposeData
+    {
+        public static void Postfix(Building __instance)
+        {
+            if (Scribe.mode == LoadSaveMode.LoadingVars && __instance is Building_CommsConsole console)
+            {
+                var hub = OrbitalTradersHub.GetFor(console);
+                if (Scribe.loader?.crossRefs != null)
+                {
+                    Traverse.Create(Scribe.loader.crossRefs).Field("loadedObjectDirectory")?.Method("RegisterLoaded", hub)?.GetValue();
+                }
+            }
         }
     }
     [HarmonyPatch(typeof(Thing), "GetFloatMenuOptions")]
