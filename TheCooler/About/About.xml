@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
   <name>The Cooler</name>
   <author>TheFarawayDev</author>
@@ -17,5 +17,5 @@
     </li>
   </modDependencies>
   <description>The Cooler is a freestanding, high-efficiency space cooling device designed by TheFarawayDev. It functions as an inverted space heater, cooling rooms directly to a target temperature without requiring exhaust vents or wall-mounting, and features a cold-blue glow and room boundary overlay.</description>
-  <modVersion>1.0.0</modVersion>
+  <modVersion>1.1.0</modVersion>
 </ModMetaData>
