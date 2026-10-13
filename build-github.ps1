@@ -43,10 +43,15 @@ $mods = @(
         Name              = "MatterAnywhere"
         NeedsHarmony      = $true
         NeedsMatterNetwork = $true
+    },
+    @{
+        Name         = "TheCooler"
+        NeedsHarmony = $true
     }
 )
 
 $rimworldRefVersion = "1.6.4850"
+$rimworldRefVersion17 = "1.7.4977-alpha.1"
 $harmonyVersion = "2.3.3"
 $rootPath = Resolve-Path .
 
@@ -70,19 +75,24 @@ foreach ($mod in $mods) {
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>$modName</AssemblyName>
+    <GameVer Condition="'`$(GameVer)' == ''">1.6</GameVer>
     <TargetFramework>net48</TargetFramework>
+    <TargetFramework Condition="'`$(GameVer)' == '1.7'">net10.0</TargetFramework>
+    <RefVer>$rimworldRefVersion</RefVer>
+    <RefVer Condition="'`$(GameVer)' == '1.7'">$rimworldRefVersion17</RefVer>
     <OutputType>Library</OutputType>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>1.6/Assemblies</OutputPath>
+    <OutputPath>`$(GameVer)/Assemblies</OutputPath>
     <Optimize>true</Optimize>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
     <DefaultItemExcludes>`$(DefaultItemExcludes);**/obj/**;**/bin/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="$rimworldRefVersion" />
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="`$(RefVer)" />
   </ItemGroup>
 "@
 
@@ -113,7 +123,8 @@ foreach ($mod in $mods) {
 
   <ItemGroup>
     <Reference Include="Matter Network">
-      <HintPath>lib/Matter Network.dll</HintPath>
+      <HintPath Condition="'`$(GameVer)' != '1.7'">lib/Matter Network.dll</HintPath>
+      <HintPath Condition="'`$(GameVer)' == '1.7'">lib/1.7/Matter Network.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
@@ -129,7 +140,10 @@ foreach ($mod in $mods) {
     try {
         Write-Host "Compiling $modName via dotnet build..." -ForegroundColor Green
         # Run dotnet build in the mod directory
-        dotnet build $csprojPath -c Release --no-incremental
+        foreach ($gv in @("1.6", "1.7")) {
+            dotnet build $csprojPath -c Release --no-incremental -p:GameVer=$gv -p:BaseIntermediateOutputPath=obj/$gv/
+            if ($LASTEXITCODE -ne 0) { break }
+        }
         
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to compile mod: $modName"
@@ -143,7 +157,7 @@ foreach ($mod in $mods) {
             if ($null -ne $xml.ModMetaData.supportedVersions) {
                 $supportedVersions = $xml.ModMetaData.supportedVersions.li
                 foreach ($ver in $supportedVersions) {
-                    if ($ver -ne "1.6") {
+                    if ($ver -ne "1.6" -and $ver -ne "1.7") {
                         $targetDir = Join-Path $modDir "$ver\Assemblies"
                         if (-not (Test-Path $targetDir)) {
                             New-Item -ItemType Directory -Path $targetDir -Force | Out-Null

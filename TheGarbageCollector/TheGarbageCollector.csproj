@@ -1,19 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>TheGarbageCollector</AssemblyName>
+    <GameVer Condition="'$(GameVer)' == ''">1.6</GameVer>
     <TargetFramework>net48</TargetFramework>
+    <TargetFramework Condition="'$(GameVer)' == '1.7'">net10.0</TargetFramework>
+    <RefVer>1.6.4850</RefVer>
+    <RefVer Condition="'$(GameVer)' == '1.7'">1.7.4977-alpha.1</RefVer>
     <OutputType>Library</OutputType>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>1.6/Assemblies</OutputPath>
+    <OutputPath>$(GameVer)/Assemblies</OutputPath>
     <Optimize>true</Optimize>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/obj/**;**/bin/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4850" />
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="$(RefVer)" />
     <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
 </Project>

@@ -3,7 +3,7 @@
   <ThingDef ParentName="BuildingBase">
     <defName>Building_QuantumNetworkRelay</defName>
     <label>quantum network relay</label>
-    <description>A quantum-entangled communications relay that bridges the local Matter Network storage to a planetary ledger. Allows cross-map resource transfers, but dynamically scales power draw up to 5000W when actively routing resources.</description>
+    <description>A quantum-entangled relay that connects the local Matter Network to a shared planetary ledger. Pushing MOVES stackable items off the storage disks into the ledger (they are no longer stored on the disks); pulling makes ledger contents available to any map with a relay. Allows cross-map resource transfers, but dynamically scales power draw up to 5000W when actively routing resources.</description>
     <thingClass>TheFarawayDev.MatterAnywhere.Building_QuantumNetworkRelay</thingClass>
     <tickerType>Normal</tickerType>
     <graphicData>

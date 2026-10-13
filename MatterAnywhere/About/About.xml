@@ -7,6 +7,7 @@
     <li>1.4</li>
     <li>1.5</li>
     <li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
   <modDependencies>
     <li>
@@ -25,7 +26,14 @@
     <li>brrainz.harmony</li>
     <li>sk.matternetwork</li>
   </loadAfter>
-  <description>Matter Anywhere is a cross-map network bridge addon for Matter Network. By building a Quantum Network Relay, you can sync your local digital storage reserves to a planetary ledger, making your digitized items accessible across different map instances.
+  <description>Matter Anywhere adds the Quantum Network Relay, a research-gated building that connects your Matter Network to a single shared planetary ledger used by every map.
+
+HOW IT WORKS (please read): this is not a simple network-to-network bridge. Items are MOVED, not copied.
+- Push / BiDi: stackable items are taken OUT of your Matter Network storage disks and converted into counts in the planetary ledger. They are no longer stored on the disks. The ledger has no capacity limit, so it can effectively replace disk storage for stackable resources.
+- Pull / BiDi: the ledger contents appear as available items in any network on any map that has a powered relay in Pull or BiDi mode.
+- Isolated: the relay does nothing. Pull only: the relay reads from the ledger but never moves items off your disks.
+
+If you do not want your disks emptied, use Pull on receiving maps and Push only on the map(s) you want to feed the ledger, or leave relays Isolated. Transfer speed and amount are limited by research (bandwidth) and the relay's power draw scales with what it moves (up to 5000 W). Only stackable items are transferred.
 
 Dev Note: This mod is an addon and a tribute to SK's original fantastic work on Matter Network. All credit for the base digitization concept, textures, and mechanics goes to SK.</description>
   <modVersion>1.4.0</modVersion>

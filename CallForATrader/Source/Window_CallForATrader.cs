@@ -108,7 +108,7 @@ namespace CallForATrader
             Widgets.DrawMenuSection(leftPanel);
             
             List<TraderKindDef> traders = DefDatabase<TraderKindDef>.AllDefs
-                .Where(t => t.orbital != isCaravanSelected && !t.label.NullOrEmpty())
+                .Where(t => t.orbital != isCaravanSelected && !t.label.NullOrEmpty() && CallForATraderMod.settings.IsTraderEnabled(t))
                 .OrderBy(t => t.label)
                 .ToList();
 
@@ -170,7 +170,7 @@ namespace CallForATrader
             if (!isCaravanSelected)
             {
                 // Economy Route
-                int ecoCost = Math.Max(0, CallForATraderMod.settings.economyCost - flatDiscount);
+                int ecoCost = Math.Max(0, CallForATraderMod.settings.ApplyTraderPrice(selectedTrader, CallForATraderMod.settings.economyCost) - flatDiscount);
                 bool ecoCanAfford = availableSilver >= ecoCost && !onCooldown;
                 DrawOption(new Rect(rect.x, y, rect.width, 60f), 
                     "Economy Cargo Route", 
@@ -183,7 +183,7 @@ namespace CallForATrader
                 y += 70f;
 
                 // Priority Hyper-Jump
-                int priorityCost = Math.Max(0, CallForATraderMod.settings.priorityCost - flatDiscount);
+                int priorityCost = Math.Max(0, CallForATraderMod.settings.ApplyTraderPrice(selectedTrader, CallForATraderMod.settings.priorityCost) - flatDiscount);
                 bool prioCanAfford = availableSilver >= priorityCost && !onCooldown;
                 DrawOption(new Rect(rect.x, y, rect.width, 60f), 
                     "Priority Hyper-Jump", 
@@ -197,7 +197,7 @@ namespace CallForATrader
 
                 // Negotiate Broker Fee
                 float discountFactor = socialLevel / 20f;
-                int negotiatedCost = (int)(CallForATraderMod.settings.negotiateCost * (1f - (discountFactor * 0.5f)));
+                int negotiatedCost = (int)(CallForATraderMod.settings.ApplyTraderPrice(selectedTrader, CallForATraderMod.settings.negotiateCost) * (1f - (discountFactor * 0.5f)));
                 bool negCanAfford = availableSilver >= negotiatedCost && !onCooldown;
                 DrawOption(new Rect(rect.x, y, rect.width, 60f), 
                     string.Format("Negotiate Fee ({0})", negotiator.LabelShort), 
@@ -210,7 +210,7 @@ namespace CallForATrader
             else
             {
                 // Caravan Route
-                int caravanCost = Math.Max(0, CallForATraderMod.settings.caravanCost - flatDiscount);
+                int caravanCost = Math.Max(0, CallForATraderMod.settings.ApplyTraderPrice(selectedTrader, CallForATraderMod.settings.caravanCost) - flatDiscount);
                 bool carCanAfford = availableSilver >= caravanCost && !onCooldown;
                 DrawOption(new Rect(rect.x, y, rect.width, 60f), 
                     "On-Ground Caravan", 

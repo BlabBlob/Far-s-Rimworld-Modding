@@ -16,6 +16,10 @@ staging/
 
 # Keep Assemblies folder structure but ignore compiled DLLs
 **/1.6/Assemblies/*.dll
+**/1.7/Assemblies/*.dll
+**/1.7/Assemblies/*.pdb
+**/1.7/Assemblies/*.xml
+!**/1.7/Assemblies/.gitkeep
 **/1.6/Assemblies/*.pdb
 **/1.6/Assemblies/*.xml
 !**/1.6/Assemblies/.gitkeep

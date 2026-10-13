@@ -102,25 +102,34 @@ namespace TheFarawayDev.MatterAnywhere
             float btnWidth = (leftInner.width - 15f) / 4f;
             float btnHeight = 30f;
 
-            if (Widgets.ButtonText(new Rect(leftInner.x, btnY, btnWidth, btnHeight), "Isolated", true, true, comp.currentMode == NetworkMode.Isolated))
+            var modeButtons = new (string label, NetworkMode mode)[]
             {
-                comp.currentMode = NetworkMode.Isolated;
-                HarmonyPatches.globalLedgerDirty = true;
-            }
-            if (Widgets.ButtonText(new Rect(leftInner.x + btnWidth + 5f, btnY, btnWidth, btnHeight), "Push", true, true, comp.currentMode == NetworkMode.PushOnly))
+                ("Isolated", NetworkMode.Isolated),
+                ("Push", NetworkMode.PushOnly),
+                ("Pull", NetworkMode.PullOnly),
+                ("BiDi", NetworkMode.BiDirectional)
+            };
+            for (int i = 0; i < modeButtons.Length; i++)
             {
-                comp.currentMode = NetworkMode.PushOnly;
-                HarmonyPatches.globalLedgerDirty = true;
-            }
-            if (Widgets.ButtonText(new Rect(leftInner.x + (btnWidth + 5f) * 2f, btnY, btnWidth, btnHeight), "Pull", true, true, comp.currentMode == NetworkMode.PullOnly))
-            {
-                comp.currentMode = NetworkMode.PullOnly;
-                HarmonyPatches.globalLedgerDirty = true;
-            }
-            if (Widgets.ButtonText(new Rect(leftInner.x + (btnWidth + 5f) * 3f, btnY, btnWidth, btnHeight), "BiDi", true, true, comp.currentMode == NetworkMode.BiDirectional))
-            {
-                comp.currentMode = NetworkMode.BiDirectional;
-                HarmonyPatches.globalLedgerDirty = true;
+                Rect btnRect = new Rect(leftInner.x + (btnWidth + 5f) * i, btnY, btnWidth, btnHeight);
+                bool selected = comp.currentMode == modeButtons[i].mode;
+                if (selected)
+                {
+                    GUI.color = new Color(0.4f, 0.9f, 0.4f);
+                }
+                // The 5th ButtonText argument is "active"; it must stay true or the button ignores clicks.
+                bool clicked = Widgets.ButtonText(btnRect, modeButtons[i].label, true, true, true);
+                GUI.color = Color.white;
+                if (selected)
+                {
+                    Widgets.DrawBox(btnRect, 2);
+                }
+                if (clicked && !selected)
+                {
+                    comp.currentMode = modeButtons[i].mode;
+                    HarmonyPatches.globalLedgerDirty = true;
+                    SoundDefOf.Click.PlayOneShotOnCamera();
+                }
             }
 
             // Bandwidth Limit Slider

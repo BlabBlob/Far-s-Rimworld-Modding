@@ -6,7 +6,10 @@ $GamePath = "C:\Program Files (x86)\Steam\steamapps\common\RimWorld"
 
 Write-Host "Compiling $modName using latest C# version..." -ForegroundColor Cyan
 
-dotnet build $csprojPath -c Release --no-incremental -p:LangVersion=preview
+foreach ($gv in @("1.6", "1.7")) {
+    dotnet build $csprojPath -c Release --no-incremental -p:LangVersion=preview -p:GameVer=$gv -p:BaseIntermediateOutputPath=obj/$gv/
+    if ($LASTEXITCODE -ne 0) { break }
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to compile mod: $modName"
@@ -15,7 +18,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Successfully compiled $modName!" -ForegroundColor Green
 
-if (-not (Test-Path "$GamePath\RimWorldWin64.exe")) {
+if (-not ((Test-Path "$GamePath\RimWorld.exe") -or (Test-Path "$GamePath\RimWorldWin64.exe"))) {
     Write-Warning "RimWorld game directory not found at '$GamePath'. Skipping deployment."
     exit 0
 }
@@ -46,9 +49,10 @@ if (Test-Path $aboutXmlPath) {
             if (-not (Test-Path $deployVersionDir)) {
                 New-Item -ItemType Directory -Path $deployVersionDir -Force | Out-Null
             }
-            $sourceAssemblies = Join-Path $PSScriptRoot "Assemblies\*"
-            if (Test-Path (Join-Path $PSScriptRoot "Assemblies")) {
-                Copy-Item -Path $sourceAssemblies -Destination $deployVersionDir -Recurse -Force
+            # 1.7 has its own build (.NET 10); older versions share the net48 build from 1.6
+            $sourceDir = if ($ver -eq "1.7") { Join-Path $PSScriptRoot "1.7\Assemblies" } else { Join-Path $PSScriptRoot "1.6\Assemblies" }
+            if (Test-Path $sourceDir) {
+                Copy-Item -Path (Join-Path $sourceDir "*") -Destination $deployVersionDir -Recurse -Force
             }
         }
     }

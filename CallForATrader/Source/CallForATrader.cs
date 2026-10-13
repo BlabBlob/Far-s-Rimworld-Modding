@@ -138,9 +138,35 @@ namespace CallForATrader
         public bool showAlertInOrbit = true;
         public bool showTrackingLetters = true;
 
+        // Per-trader overrides, keyed by TraderKindDef.defName.
+        public HashSet<string> disabledTraders = new HashSet<string>();
+        public Dictionary<string, int> traderPricePercent = new Dictionary<string, int>();
+
+        public bool IsTraderEnabled(TraderKindDef def)
+        {
+            return def == null || !disabledTraders.Contains(def.defName);
+        }
+
+        public int GetPricePercent(TraderKindDef def)
+        {
+            if (def != null && traderPricePercent.TryGetValue(def.defName, out int pct)) return pct;
+            return 100;
+        }
+
+        public int ApplyTraderPrice(TraderKindDef def, int cost)
+        {
+            return (int)Math.Round(cost * GetPricePercent(def) / 100f);
+        }
+
         public override void ExposeData()
         {
             base.ExposeData();
+            List<string> disabledList = disabledTraders != null ? disabledTraders.ToList() : new List<string>();
+            Scribe_Collections.Look(ref disabledList, "disabledTraders", LookMode.Value);
+            disabledTraders = disabledList != null ? new HashSet<string>(disabledList) : new HashSet<string>();
+            Scribe_Collections.Look(ref traderPricePercent, "traderPricePercent", LookMode.Value, LookMode.Value);
+            if (traderPricePercent == null) traderPricePercent = new Dictionary<string, int>();
+
             Scribe_Values.Look(ref economyCost, "economyCost", 150);
             Scribe_Values.Look(ref negotiateCost, "negotiateCost", 300);
             Scribe_Values.Look(ref caravanCost, "caravanCost", 200);
@@ -161,11 +187,25 @@ namespace CallForATrader
             settings = GetSettings<CallForATraderSettings>();
         }
 
+        private Vector2 settingsScroll = Vector2.zero;
+        private string traderFilter = "";
+
         public override void DoSettingsWindowContents(Rect inRect)
         {
+            List<TraderKindDef> allTraders = DefDatabase<TraderKindDef>.AllDefs
+                .Where(t => !t.label.NullOrEmpty())
+                .OrderBy(t => !t.orbital).ThenBy(t => t.label)
+                .ToList();
+            string filter = traderFilter ?? "";
+            List<TraderKindDef> shownTraders = allTraders
+                .Where(t => filter.Length == 0 || t.label.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0 || t.defName.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            Rect viewRect = new Rect(0f, 0f, inRect.width - 20f, 640f + shownTraders.Count * 30f);
             Listing_Standard listingStandard = new Listing_Standard();
-            listingStandard.Begin(inRect);
-            
+            Widgets.BeginScrollView(inRect, ref settingsScroll, viewRect);
+            listingStandard.Begin(viewRect);
+
             // Economy Cost
             listingStandard.Label("Economy Cargo Route Cost: " + settings.economyCost + " Silver");
             settings.economyCost = (int)listingStandard.Slider(settings.economyCost, 0f, 1000f);
@@ -198,7 +238,34 @@ namespace CallForATrader
             listingStandard.CheckboxLabeled("Show 'Orbital Trader in Orbit' alert banner", ref settings.showAlertInOrbit, "Show or hide the alert banner on the right side of the screen when an orbital trader is in orbit.");
             listingStandard.CheckboxLabeled("Show trader tracking letters", ref settings.showTrackingLetters, "Show or hide live countdown letters for arriving and active traders.");
 
+            // Per-trader overrides
+            listingStandard.GapLine();
+            listingStandard.Label("Per-trader settings: untick a trader to remove it from the menu and from random offers, or scale its price (percent of the normal cost).");
+            traderFilter = listingStandard.TextEntryLabeled("Filter: ", traderFilter);
+            foreach (TraderKindDef t in shownTraders)
+            {
+                Rect row = listingStandard.GetRect(28f);
+                bool enabled = settings.IsTraderEnabled(t);
+                bool wasEnabled = enabled;
+                Widgets.CheckboxLabeled(new Rect(row.x, row.y, row.width * 0.5f, row.height), (t.orbital ? "[Orbital] " : "[Caravan] ") + t.LabelCap, ref enabled);
+                if (enabled != wasEnabled)
+                {
+                    if (enabled) settings.disabledTraders.Remove(t.defName);
+                    else settings.disabledTraders.Add(t.defName);
+                }
+                if (enabled)
+                {
+                    int pct = settings.GetPricePercent(t);
+                    Rect sliderRect = new Rect(row.x + row.width * 0.52f, row.y + 4f, row.width * 0.34f, row.height - 4f);
+                    pct = Mathf.RoundToInt(Widgets.HorizontalSlider(sliderRect, pct, 0f, 500f, true));
+                    Widgets.Label(new Rect(row.x + row.width * 0.88f, row.y, row.width * 0.12f, row.height), pct + "%");
+                    if (pct == 100) settings.traderPricePercent.Remove(t.defName);
+                    else settings.traderPricePercent[t.defName] = pct;
+                }
+            }
+
             listingStandard.End();
+            Widgets.EndScrollView();
         }
 
         public override string SettingsCategory()
@@ -809,7 +876,7 @@ namespace CallForATrader
             List<TraderKindDef> traders = new List<TraderKindDef>();
             foreach (TraderKindDef def in DefDatabase<TraderKindDef>.AllDefs)
             {
-                if (def.orbital)
+                if (def.orbital && CallForATraderMod.settings.IsTraderEnabled(def))
                 {
                     traders.Add(def);
                 }
@@ -818,7 +885,7 @@ namespace CallForATrader
             if (traders.Count == 0) return false;
             TraderKindDef selected = traders.RandomElement();
 
-            int cost = CallForATraderMod.settings.economyCost;
+            int cost = CallForATraderMod.settings.ApplyTraderPrice(selected, CallForATraderMod.settings.economyCost);
 
             LetterDef letterDef = DefDatabase<LetterDef>.GetNamed("Letter_OrbitalTraderOffer", false);
             if (letterDef == null) return false;
