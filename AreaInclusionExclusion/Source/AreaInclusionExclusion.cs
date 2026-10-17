@@ -268,7 +268,7 @@ namespace AreaInclusionExclusion
             List<Area> allAreas = p.Map.areaManager.AllAreas;
             if (AreaInclusionExclusionMod.settings != null && AreaInclusionExclusionMod.settings.hideUtilityAreas)
             {
-                List<Area> allAreas = p.Map.areaManager.AllAreas.Where(a => a.AssignableAsAllowed()).ToList();
+                allAreas = p.Map.areaManager.AllAreas.Where(a => a.AssignableAsAllowed()).ToList();
             }
 
             int count = allAreas.Count + 1; // +1 for Unrestricted
