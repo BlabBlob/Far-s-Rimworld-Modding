@@ -48,32 +48,7 @@ namespace AreaInclusionExclusion
         }
     }
 
-    public static class UtilityAreaFilter
-    {
-        private static readonly string[] utilityKeywords = new string[]
-        {
-            "clean", "snow", "water", "vehicle", "dumping", "autoclean", "sweeper"
-        };
-
-        public static bool IsUtilityArea(Area area)
-        {
-            if (area == null) return false;
-            string label = area.Label != null ? area.Label.ToLower() : "";
-            for (int i = 0; i < utilityKeywords.Length; i++)
-            {
-                if (label.Contains(utilityKeywords[i]))
-                {
-                    return true;
-                }
-            }
-            string typeName = area.GetType().Name.ToLower();
-            if (typeName.Contains("clean") || typeName.Contains("snow") || typeName.Contains("water") || typeName.Contains("vehicle"))
-            {
-                return true;
-            }
-            return false;
-        }
-    }
+   
 
     // ==========================================
     // 1. DATA CONTAINER FOR PERSISTENT STATE
@@ -293,15 +268,12 @@ namespace AreaInclusionExclusion
             List<Area> allAreas = p.Map.areaManager.AllAreas;
             if (AreaInclusionExclusionMod.settings != null && AreaInclusionExclusionMod.settings.hideUtilityAreas)
             {
-                allAreas = allAreas.Where(a => !UtilityAreaFilter.IsUtilityArea(a)).ToList();
+                List<Area> allAreas = p.Map.areaManager.AllAreas.Where(a => a.AssignableAsAllowed()).ToList();
             }
 
             int count = allAreas.Count + 1; // +1 for Unrestricted
-            float minBtnWidth = 50f;
-            float totalWidthNeeded = count * minBtnWidth;
 
-            if (totalWidthNeeded <= rect.width)
-            {
+
                 float btnWidth = rect.width / (float)count;
 
                 // Draw "Unrestricted" button
@@ -314,29 +286,6 @@ namespace AreaInclusionExclusion
                     Rect areaRect = new Rect(rect.x + (i + 1) * btnWidth, rect.y, btnWidth, rect.height).ContractedBy(1f);
                     DrawAreaButton(areaRect, p, allAreas[i]);
                 }
-            }
-            else
-            {
-                // Too wide for fixed column width: Use horizontal scrolling
-                float btnWidth = minBtnWidth;
-                Rect outRect = rect;
-                Rect viewRect = new Rect(0f, 0f, totalWidthNeeded, rect.height - 4f);
-
-                Widgets.BeginScrollView(outRect, ref scrollPosition, viewRect, true);
-
-                // Draw "Unrestricted" button
-                Rect unRestRect = new Rect(0f, 0f, btnWidth, viewRect.height).ContractedBy(1f);
-                DrawAreaButton(unRestRect, p, null);
-
-                // Draw all other areas
-                for (int i = 0; i < allAreas.Count; i++)
-                {
-                    Rect areaRect = new Rect((i + 1) * btnWidth, 0f, btnWidth, viewRect.height).ContractedBy(1f);
-                    DrawAreaButton(areaRect, p, allAreas[i]);
-                }
-
-                Widgets.EndScrollView();
-            }
 
             return false; // Skip vanilla drawing
         }
